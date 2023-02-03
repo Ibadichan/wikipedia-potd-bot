@@ -1,1 +1,1 @@
-# wikipedia-potd-bot
+# Wikipedia POTD bot
