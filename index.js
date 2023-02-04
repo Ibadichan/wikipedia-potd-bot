@@ -2,6 +2,7 @@ require('dotenv').config();
 
 const express = require('express');
 const morgan = require('morgan');
+const sendPotd = require('./services/send-potd');
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -26,7 +27,7 @@ async function runApplication() {
 
   app.post('/send-potd', async (req, res) => {
     try {
-      // await sendPotd();
+      await sendPotd();
 
       res.json({
         code: 'OK',
