@@ -1,43 +1,47 @@
+const dayjs = require('dayjs');
 const jsdom = require('jsdom');
+const RSSParser = require('rss-parser');
+
+const parser = new RSSParser();
 
 const { JSDOM } = jsdom;
 
-function formatDate(dateString) {
-  const options = { year: 'numeric', month: 'long', day: 'numeric' };
+const RSS_URL = 'https://commons.wikimedia.org/w/api.php?action=featuredfeed&feed=potd&feedformat=rss&language=ru';
 
-  return new Date(dateString).toLocaleDateString(undefined, options);
-}
+function getImageUrl(node) {
+  const { srcset } = node;
 
-function formatCopyright(html) {
-  const label = html.split('credit:')[0].trim();
-  const value = html.split('credit:')[1].trim();
+  let biggestImage = '';
+  let highestPixelDensity = 1;
 
-  return `<b>${label} credit:</b> ${value}`;
+  srcset.split(',').forEach((descriptor) => {
+    const [url, pixelDensity] = descriptor.trim().split(' ');
+
+    if (parseFloat(pixelDensity) > highestPixelDensity) {
+      biggestImage = url;
+      highestPixelDensity = parseFloat(pixelDensity);
+    }
+  });
+
+  return biggestImage;
 }
 
 async function parsePotd() {
-  const dom = await JSDOM.fromURL('https://en.wikipedia.org/wiki/Wikipedia:Picture_of_the_day');
+  const feed = await parser.parseURL(RSS_URL);
+
+  const lastFeed = feed.items[feed.items.length - 1];
+
+  const dom = new JSDOM(lastFeed.content);
 
   const { document } = dom.window;
 
-  const links = document.querySelectorAll('#mp-tfp a');
-
-  // Transform relative urls to absolute
-  links.forEach((link) => link.setAttribute('href', link.href));
-
-  const date = new Date();
-  const copyright = document.querySelector('#mp-tfp small').innerHTML;
-  const explanation = document.querySelector('#mp-tfp p:first-child').innerHTML.trim();
-  const imgNode = document.querySelector('#mp-tfp img');
-
-  const url = imgNode.src;
-  const title = imgNode.alt;
+  const date = dayjs().format('YYYY.MM.DD');
+  const explanation = document.querySelector('.description').innerHTML;
+  const url = getImageUrl(document.querySelector('img'));
 
   const potd = {
-    copyright: formatCopyright(copyright),
-    date: `<em>${formatDate(date)}</em>`,
+    date,
     explanation,
-    title: `<b>${title}</b>`,
     url,
   };
 
